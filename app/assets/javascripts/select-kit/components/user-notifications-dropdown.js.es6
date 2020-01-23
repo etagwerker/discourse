@@ -2,26 +2,35 @@ import DropdownSelectBox from "select-kit/components/dropdown-select-box";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import showModal from "discourse/lib/show-modal";
 import discourseComputed from "discourse-common/utils/decorators";
+import { computed } from "@ember/object";
 
 export default DropdownSelectBox.extend({
   classNames: ["user-notifications", "user-notifications-dropdown"],
-  nameProperty: "label",
 
-  computeContent() {
+  didReceiveAttrs() {
+    this._super(...arguments);
+
+    this.selectKit.set(
+      "icon",
+      this.mainCollection.find(row => row.id === this.value).icon
+    );
+  },
+
+  content: computed(function() {
     const content = [];
 
     content.push({
       icon: "user",
       id: "changeToNormal",
       description: I18n.t("user.user_notifications.normal_option_title"),
-      label: I18n.t("user.user_notifications.normal_option")
+      name: I18n.t("user.user_notifications.normal_option")
     });
 
     content.push({
       icon: "times-circle",
       id: "changeToMuted",
       description: I18n.t("user.user_notifications.mute_option_title"),
-      label: I18n.t("user.user_notifications.mute_option")
+      name: I18n.t("user.user_notifications.mute_option")
     });
 
     if (this.get("user.can_ignore_user")) {
@@ -29,17 +38,12 @@ export default DropdownSelectBox.extend({
         icon: "far-eye-slash",
         id: "changeToIgnored",
         description: I18n.t("user.user_notifications.ignore_option_title"),
-        label: I18n.t("user.user_notifications.ignore_option")
+        name: I18n.t("user.user_notifications.ignore_option")
       });
     }
 
     return content;
-  },
-
-  @discourseComputed("value")
-  headerIcon(value) {
-    return this.computeContent().find(row => row.id === value).icon;
-  },
+  }),
 
   changeToNormal() {
     this.updateNotificationLevel("normal").catch(popupAjaxError);
@@ -62,12 +66,6 @@ export default DropdownSelectBox.extend({
     } else {
       return "changeToNormal";
     }
-  },
-
-  _select(id) {
-    this.select(
-      this.collectionComputedContent.find(c => c.originalContent.id === id)
-    );
   },
 
   actions: {

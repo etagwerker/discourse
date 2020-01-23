@@ -1,521 +1,914 @@
-import discourseComputed from "discourse-common/utils/decorators";
-import EmberObject from "@ember/object";
+import { computed, default as EmberObject } from "@ember/object";
 import Component from "@ember/component";
-const { get, isNone, run, isEmpty, makeArray } = Ember;
-
+import deprecated from "discourse-common/lib/deprecated";
+const { get, isNone, makeArray } = Ember;
 import UtilsMixin from "select-kit/mixins/utils";
-import DomHelpersMixin from "select-kit/mixins/dom-helpers";
-import EventsMixin from "select-kit/mixins/events";
 import PluginApiMixin from "select-kit/mixins/plugin-api";
+import { debounce, cancel, throttle, bind, schedule } from "@ember/runloop";
+import { Promise } from "rsvp";
+import { readOnly } from "@ember/object/computed";
 import {
-  applyContentPluginApiCallbacks,
   applyHeaderContentPluginApiCallbacks,
-  applyCollectionHeaderCallbacks
+  applyModifyNoSelectionPluginApiCallbacks,
+  applyContentPluginApiCallbacks,
+  applyOnOpenPluginApiCallbacks,
+  applyOnClosePluginApiCallbacks,
+  applyOnInputPluginApiCallbacks
 } from "select-kit/mixins/plugin-api";
 
+export const MAIN_COLLECTION_IDENTIFIER = "MAIN_COLLECTION";
+export const ERRORS_COLLECTION_IDENTIFIER = "ERRORS_COLLECTION";
+
+const EMPTY_OBJECT = Object.freeze({});
+const SELECT_KIT_OPTIONS = Ember.Mixin.create({
+  mergedProperties: ["selectKitOptions"],
+  selectKitOptions: EMPTY_OBJECT
+});
+
 export default Component.extend(
-  UtilsMixin,
+  SELECT_KIT_OPTIONS,
   PluginApiMixin,
-  DomHelpersMixin,
-  EventsMixin,
+  UtilsMixin,
   {
     pluginApiIdentifiers: ["select-kit"],
     layoutName: "select-kit/templates/components/select-kit",
     classNames: ["select-kit"],
     classNameBindings: [
-      "isLoading",
-      "isFocused",
-      "isExpanded",
-      "isDisabled",
-      "isHidden",
-      "hasSelection",
-      "hasReachedMaximum",
-      "hasReachedMinimum"
+      "selectKit.isLoading:is-loading",
+      "selectKit.isExpanded:is-expanded",
+      "selectKit.isDisabled:is-disabled",
+      "selectKit.isHidden:is-hidden",
+      "selectKit.hasSelection:has-selection",
+      "selectKit.hasReachedMaximum:has-reached-maximum",
+      "selectKit.hasReachedMinimum:has-reached-minimum"
     ],
-    isDisabled: false,
-    isExpanded: false,
-    isFocused: false,
-    isHidden: false,
-    isLoading: false,
-    isAsync: false,
-    renderedBodyOnce: false,
-    renderedFilterOnce: false,
     tabindex: 0,
-    none: null,
-    highlighted: null,
-    valueAttribute: "id",
-    nameProperty: "name",
-    autoFilterable: false,
-    filterable: false,
-    filter: "",
-    previousFilter: "",
-    filterIcon: "search",
-    headerIcon: null,
-    rowComponent: "select-kit/select-kit-row",
-    rowComponentOptions: null,
-    noneRowComponent: "select-kit/select-kit-none-row",
-    createRowComponent: "select-kit/select-kit-create-row",
-    filterComponent: "select-kit/select-kit-filter",
-    headerComponent: "select-kit/select-kit-header",
-    headerComponentOptions: null,
-    headerComputedContent: null,
-    collectionHeaderComputedContent: null,
-    collectionComponent: "select-kit/select-kit-collection",
-    verticalOffset: 0,
-    horizontalOffset: 0,
-    fullWidthOnMobile: false,
-    castInteger: false,
-    castBoolean: false,
-    allowAny: false,
-    allowInitialValueMutation: false,
     content: null,
-    computedContent: null,
-    limitMatches: null,
-    nameChanges: false,
-    allowContentReplacement: false,
-    collectionHeader: null,
-    allowAutoSelectFirst: true,
-    highlightedSelection: null,
-    maximum: null,
-    minimum: null,
-    minimumLabel: null,
-    maximumLabel: null,
-    forceEscape: false,
+    value: null,
+    selectKit: null,
+    mainCollection: null,
+    errorsCollection: null,
+    options: null,
+    valueProperty: "id",
+    nameProperty: "name",
 
     init() {
       this._super(...arguments);
 
-      this.selectKitComponent = true;
-      this.noneValue = "__none__";
+      this._searchPromise = null;
+
+      this.set("errorsCollection", []);
+      this._collections = [
+        ERRORS_COLLECTION_IDENTIFIER,
+        MAIN_COLLECTION_IDENTIFIER
+      ];
+
+      !this.options && this.set("options", EmberObject.create({}));
+
+      this.handleDeprecations();
+
       this.set(
-        "headerComponentOptions",
-        EmberObject.create({ forceEscape: this.forceEscape })
-      );
-      this.set(
-        "rowComponentOptions",
+        "selectKit",
         EmberObject.create({
-          forceEscape: this.forceEscape
+          uniqueID: Ember.guidFor(this),
+          isLoading: false,
+          isHidden: false,
+          isExpanded: false,
+          isFilterExpanded: false,
+          isDisabled: this.isDisabled,
+          hasSelection: false,
+          hasNoContent: true,
+          highlighted: null,
+          noneItem: null,
+          valueProperty: this.valueProperty,
+          nameProperty: this.nameProperty,
+          filter: null,
+          componentForCollectionIdentifier: bind(
+            this,
+            this.componentForCollectionIdentifier
+          ),
+          componentForRow: bind(this, this.componentForRow),
+          options: EmberObject.create(),
+          modifyContent: bind(this, this._modifyContentWrapper),
+          modifySelection: bind(this, this._modifySelectionWrapper),
+          toggle: bind(this, this._toggle),
+          close: bind(this, this._close),
+          open: bind(this, this._open),
+          onOpen: bind(this, this._onOpenWrapper),
+          onClose: bind(this, this._onCloseWrapper),
+          onInput: bind(this, this._onInput),
+          onClearSelection: bind(this, this._onClearSelection),
+          onHover: bind(this, this._onHover),
+          highlightNext: bind(this, this._highlightNext),
+          highlightPrevious: bind(this, this._highlightPrevious),
+          onKeydown: bind(this, this._onKeydownWrapper),
+          change: bind(this, this._onChangeWrapper),
+          select: bind(this, this.select),
+          deselect: bind(this, this.deselect)
         })
       );
-      this.set("computedContent", []);
-      this.set("highlightedSelection", []);
-
-      if (this.nameChanges) {
-        this.addObserver(
-          `content.@each.${this.nameProperty}`,
-          this,
-          this._compute
-        );
-      }
-
-      if (this.allowContentReplacement) {
-        this.addObserver(`content.[]`, this, this._compute);
-      }
-
-      if (this.isAsync) {
-        this.addObserver(`asyncContent.[]`, this, this._compute);
-      }
     },
 
-    keyDown(event) {
-      if (!isEmpty(this.filter)) return true;
+    didUpdateAttrs() {
+      this._super(...arguments);
 
-      const keyCode = event.keyCode || event.which;
-
-      if (event.metaKey === true && keyCode === this.keys.A) {
-        this.didPressSelectAll();
-        return false;
-      }
-
-      if (keyCode === this.keys.BACKSPACE) {
-        this.didPressBackspace();
-        return false;
-      }
+      this.handleDeprecations();
     },
 
     willDestroyElement() {
-      this.removeObserver(
-        `content.@each.${this.nameProperty}`,
-        this,
-        "_compute"
-      );
-      this.removeObserver(`content.[]`, this, "_compute");
-      this.removeObserver(`asyncContent.[]`, this, "_compute");
-    },
+      this._super(...arguments);
 
-    willComputeAttributes() {},
-    didComputeAttributes() {},
+      this._searchPromise && cancel(this._searchPromise);
 
-    willComputeContent(content) {
-      return applyContentPluginApiCallbacks(
-        this.pluginApiIdentifiers,
-        content,
-        this
-      );
-    },
-    computeContent(content) {
-      return content;
-    },
-    _beforeDidComputeContent(content) {
-      let existingCreatedComputedContent = [];
-      if (!this.allowContentReplacement) {
-        existingCreatedComputedContent = this.computedContent.filterBy(
-          "created",
-          true
-        );
+      if (this.popper) {
+        this.popper.destroy();
+        this.popper = null;
       }
+    },
 
-      this.setProperties({
-        computedContent: content
-          .map(c => this.computeContentItem(c))
-          .concat(existingCreatedComputedContent)
+    didReceiveAttrs() {
+      this._super(...arguments);
+
+      const computedOptions = {};
+      Object.keys(this.selectKitOptions).forEach(key => {
+        const value = this.selectKitOptions[key];
+        if (typeof value === "string" && value in this) {
+          const computedValue = get(this, value);
+          if (typeof computedValue !== "function") {
+            computedOptions[key] = get(this, value);
+            return;
+          }
+        }
+        computedOptions[key] = value;
       });
-      return content;
-    },
-    didComputeContent() {},
-
-    willComputeAsyncContent(content) {
-      return content;
-    },
-    computeAsyncContent(content) {
-      return content;
-    },
-    _beforeDidComputeAsyncContent(content) {
-      content = applyContentPluginApiCallbacks(
-        this.pluginApiIdentifiers,
-        content,
-        this
+      this.selectKit.options.setProperties(
+        Object.assign(computedOptions, this.options || {})
       );
-      this.setProperties({
-        computedAsyncContent: content.map(c => this.computeAsyncContentItem(c))
+
+      this.selectKit.setProperties({
+        hasSelection: !Ember.isEmpty(this.value),
+        noneItem: this._modifyNoSelectionWrapper()
       });
-      return content;
-    },
-    didComputeAsyncContent() {},
 
-    computeContentItem(contentItem, options) {
-      let originalContent;
-      options = options || {};
-      const name = options.name;
-
-      if (typeof contentItem === "string" || typeof contentItem === "number") {
-        originalContent = {};
-        originalContent[this.valueAttribute] = contentItem;
-        originalContent[this.nameProperty] = name || contentItem;
-      } else {
-        originalContent = contentItem;
+      if (this.selectKit.isExpanded) {
+        if (this._searchPromise) {
+          cancel(this._searchPromise);
+        }
+        this._searchPromise = this._searchWrapper(this.selectKit.filter);
       }
 
-      let computedContentItem = {
-        value: this._cast(this.valueForContentItem(contentItem)),
-        name: name || this._nameForContent(contentItem),
-        locked: false,
-        created: options.created || false,
-        __sk_row_type: options.created
-          ? "createRow"
-          : contentItem.__sk_row_type,
-        originalContent
-      };
-
-      return computedContentItem;
-    },
-
-    computeAsyncContentItem(contentItem, options) {
-      return this.computeContentItem(contentItem, options);
-    },
-
-    @discourseComputed(
-      "isAsync",
-      "isLoading",
-      "filteredAsyncComputedContent.[]",
-      "filteredComputedContent.[]"
-    )
-    collectionComputedContent(
-      isAsync,
-      isLoading,
-      filteredAsyncComputedContent,
-      filteredComputedContent
-    ) {
-      if (isAsync) {
-        return isLoading ? [] : filteredAsyncComputedContent;
-      } else {
-        return filteredComputedContent;
+      if (this.computeContent) {
+        this.set("content", this.computeContent());
       }
     },
 
-    validateCreate(created) {
-      return !this.hasReachedMaximum && created.length > 0;
+    selectKitOptions: {
+      showFullTitle: true,
+      none: null,
+      translatedNone: null,
+      filterable: false,
+      autoFilterable: "autoFilterable",
+      filterIcon: "search",
+      filterPlaceholder: "filterPlaceholder",
+      translatedfilterPlaceholder: null,
+      icon: null,
+      icons: null,
+      maximum: null,
+      minimum: null,
+      minimumLabel: null,
+      maximumLabel: null,
+      autoInsertNoneItem: true,
+      clearOnClick: false,
+      closeOnChange: true,
+      limitMatches: null,
+      placement: "bottom-start",
+      filterComponent: "select-kit/select-kit-filter",
+      selectedNameComponent: "selected-name",
+      hasReachedMaximum: "hasReachedMaximum",
+      hasReachedMinimum: "hasReachedMinimum"
     },
 
-    validateSelect() {
-      return !this.hasReachedMaximum;
-    },
+    autoFilterable: computed("content.[]", "selectKit.filter", function() {
+      return (
+        this.selectKit.filter &&
+        this.options.autoFilterable &&
+        this.content.length > 15
+      );
+    }),
 
-    @discourseComputed("maximum", "selection.[]")
-    hasReachedMaximum(maximum, selection) {
-      if (!maximum) return false;
-      selection = makeArray(selection);
-      return selection.length >= maximum;
-    },
-
-    @discourseComputed("minimum", "selection.[]")
-    hasReachedMinimum(minimum, selection) {
-      if (!minimum) return true;
-      selection = makeArray(selection);
-      return selection.length >= minimum;
-    },
-
-    @discourseComputed("shouldFilter", "allowAny")
-    shouldDisplayFilter(shouldFilter, allowAny) {
-      if (shouldFilter) return true;
-      if (allowAny) return true;
-      return false;
-    },
-
-    @discourseComputed("filter", "collectionComputedContent.[]", "isLoading")
-    noContentRow(filter, collectionComputedContent, isLoading) {
-      if (
-        filter.length > 0 &&
-        collectionComputedContent.length === 0 &&
-        !isLoading
-      ) {
-        return this.termMatchErrorMessage || I18n.t("select_kit.no_content");
-      }
-    },
-
-    @discourseComputed("hasReachedMaximum", "hasReachedMinimum", "isExpanded")
-    validationMessage(hasReachedMaximum, hasReachedMinimum) {
-      if (hasReachedMaximum && this.maximum) {
-        const key = this.maximumLabel || "select_kit.max_content_reached";
-        return I18n.t(key, { count: this.maximum });
-      }
-
-      if (!hasReachedMinimum && this.minimum) {
-        const key = this.minimumLabel || "select_kit.min_content_not_reached";
-        return I18n.t(key, { count: this.minimum });
-      }
-    },
-
-    @discourseComputed("allowAny")
-    filterPlaceholder(allowAny) {
-      return allowAny
+    filterPlaceholder: computed("options.allowAny", function() {
+      return this.options.allowAny
         ? "select_kit.filter_placeholder_with_any"
         : "select_kit.filter_placeholder";
-    },
+    }),
 
-    @discourseComputed(
-      "filter",
-      "filterable",
-      "autoFilterable",
-      "renderedFilterOnce"
-    )
-    shouldFilter(filter, filterable, autoFilterable, renderedFilterOnce) {
-      if (renderedFilterOnce && filterable) return true;
-      if (filterable) return true;
-      if (autoFilterable && filter.length > 0) return true;
-      return false;
-    },
+    collections: computed(
+      "selectedContent.[]",
+      "mainCollection.[]",
+      "errorsCollection.[]",
+      function() {
+        return this._collections.map(identifier => {
+          return {
+            identifier,
+            content:
+              this.collectionForIdentifier(identifier) || this.mainCollection
+          };
+        });
+      }
+    ),
 
-    @discourseComputed(
-      "computedValue",
-      "filter",
-      "collectionComputedContent.[]",
-      "hasReachedMaximum",
-      "isLoading"
-    )
-    shouldDisplayCreateRow(
-      computedValue,
-      filter,
-      collectionComputedContent,
-      hasReachedMaximum,
-      isLoading
-    ) {
-      if (isLoading || hasReachedMaximum) return false;
-      if (collectionComputedContent.map(c => c.value).includes(filter))
+    hasReachedMaximum: readOnly(
+      "selectKit.options.maximum",
+      "value",
+      function() {
+        const maximum = this.selectKit.options.maximum;
+
+        if (maximum && makeArray(this.value).length >= maximum) {
+          return true;
+        }
+
         return false;
-      if (this.allowAny && this.validateCreate(filter)) return true;
-      return false;
-    },
-
-    @discourseComputed("filter", "shouldDisplayCreateRow")
-    createRowComputedContent(filter, shouldDisplayCreateRow) {
-      if (shouldDisplayCreateRow) {
-        let content = this.createContentFromInput(filter);
-        let computedContentItem = this.computeContentItem(content, {
-          created: true
-        });
-        computedContentItem.__sk_row_type = "createRow";
-        return computedContentItem;
       }
-    },
+    ),
 
-    @discourseComputed
-    templateForRow() {
-      return () => null;
-    },
+    hasReachedMinimum: readOnly(
+      "selectKit.options.minimum",
+      "value",
+      function() {
+        const minimum = this.selectKit.options.minimum;
 
-    @discourseComputed
-    templateForNoneRow() {
-      return () => null;
-    },
+        if (!minimum || makeArray(this.value).length >= minimum) {
+          return true;
+        }
 
-    @discourseComputed("filter")
-    templateForCreateRow() {
-      return rowComponent => {
-        return I18n.t("select_kit.create", {
-          content: rowComponent.get("computedContent.name")
-        });
-      };
-    },
-
-    @discourseComputed("none")
-    noneRowComputedContent(none) {
-      if (isNone(none)) return null;
-
-      let noneRowComputedContent;
-
-      switch (typeof none) {
-        case "string":
-          noneRowComputedContent = this.computeContentItem(this.noneValue, {
-            name: (I18n.t(none) || "").htmlSafe()
-          });
-          break;
-        default:
-          noneRowComputedContent = this.computeContentItem(none);
+        return false;
       }
-
-      noneRowComputedContent.__sk_row_type = "noneRow";
-
-      return noneRowComputedContent;
-    },
+    ),
 
     createContentFromInput(input) {
       return input;
     },
 
-    highlightSelection(items) {
-      this.set("highlightedSelection", makeArray(items));
-      this.notifyPropertyChange("highlightedSelection");
+    validateCreate(filter, content) {
+      this.clearErrors();
+
+      return (
+        filter.length > 0 &&
+        content &&
+        !content.map(c => this.getValue(c)).includes(filter) &&
+        !makeArray(this.value).includes(filter)
+      );
     },
 
-    clearHighlightSelection() {
-      this.highlightSelection([]);
-    },
+    validateSelect() {
+      this.clearErrors();
 
-    willSelect() {},
-    didSelect() {},
+      const selection = Ember.makeArray(this.value);
 
-    didClearSelection() {},
-
-    willCreate() {},
-    didCreate() {},
-
-    willDeselect() {},
-    didDeselect() {},
-
-    clearFilter() {
-      this.$filterInput().val("");
-      this.setProperties({ filter: "", previousFilter: "" });
-    },
-
-    startLoading() {
-      this.set("isLoading", true);
-      this.set("highlighted", null);
-      this._boundaryActionHandler("onStartLoading");
-    },
-
-    stopLoading() {
-      if (this.site && !this.site.isMobileDevice) {
-        this.focusFilterOrHeader();
+      const maximum = this.selectKit.options.maximum;
+      if (maximum && selection.length >= maximum) {
+        const key =
+          this.selectKit.options.maximumLabel ||
+          "select_kit.max_content_reached";
+        this.addError(I18n.t(key, { count: maximum }));
+        return false;
       }
 
-      this.set("isLoading", false);
-      this._boundaryActionHandler("onStopLoading");
+      const minimum = this.selectKit.options.minimum;
+      if (minimum && selection.length <= minimum) {
+        const key =
+          this.selectKit.options.minimumLabel ||
+          "select_kit.min_content_not_reached";
+        this.addError(I18n.t(key, { count: minimum }));
+        return false;
+      }
+
+      return true;
     },
 
-    @discourseComputed(
-      "selection.[]",
-      "isExpanded",
-      "filter",
-      "highlightedSelection.[]"
-    )
-    collectionHeaderComputedContent() {
-      return applyCollectionHeaderCallbacks(
+    addError(error) {
+      this.errorsCollection.pushObject(error);
+
+      this._safeAfterRender(() => this.popper && this.popper.scheduleUpdate());
+    },
+
+    clearErrors() {
+      if (!this.element || this.isDestroyed || this.isDestroying) {
+        return;
+      }
+
+      this.set("errorsCollection", []);
+    },
+
+    prependCollection(identifier) {
+      this._collections.unshift(identifier);
+    },
+
+    appendCollection(identifier) {
+      this._collections.push(identifier);
+    },
+
+    insertCollectionAtIndex(identifier, index) {
+      this._collections.insertAt(index, identifier);
+    },
+
+    insertBeforeCollection(identifier, insertedIdentifier) {
+      const index = this._collections.indexOf(identifier);
+      this.insertCollectionAtIndex(insertedIdentifier, index - 1);
+    },
+
+    insertAfterCollection(identifier, insertedIdentifier) {
+      const index = this._collections.indexOf(identifier);
+      this.insertCollectionAtIndex(insertedIdentifier, index + 1);
+    },
+
+    collectionForIdentifier(identifier) {
+      switch (identifier) {
+        case ERRORS_COLLECTION_IDENTIFIER:
+          return this.errorsCollection;
+          break;
+        default:
+          return this.mainCollection;
+      }
+    },
+
+    componentForRow() {
+      return this.rowComponent || "select-kit/select-kit-row";
+    },
+
+    componentForCollectionIdentifier(identifier) {
+      switch (identifier) {
+        case ERRORS_COLLECTION_IDENTIFIER:
+          return "select-kit/errors-collection";
+          break;
+        default:
+          return "select-kit/select-kit-collection";
+      }
+    },
+
+    _onInput(event) {
+      this.popper && this.popper.scheduleUpdate();
+
+      if (this._searchPromise) {
+        cancel(this._searchPromise);
+      }
+
+      const input = applyOnInputPluginApiCallbacks(
         this.pluginApiIdentifiers,
-        this.collectionHeader,
-        this
+        event,
+        this.selectKit
+      );
+
+      if (input) {
+        this.selectKit.set("isLoading", true);
+        debounce(this, this._debouncedInput, event.target.value, 200);
+      }
+    },
+
+    _debouncedInput(filter) {
+      this.selectKit.set("filter", filter);
+      this._searchPromise = this._searchWrapper(filter);
+    },
+
+    _onChangeWrapper(value, items) {
+      return new Promise(resolve => {
+        if (!this.selectKit.valueProperty) {
+          const noneItem = this.modifyNoSelection();
+          if (noneItem === value) {
+            value = null;
+            items = [];
+          }
+        }
+
+        this._boundaryActionHandler("onChange", value, items);
+        resolve(items);
+      }).finally(() => {
+        if (!this.isDestroying && !this.isDestroyed) {
+          if (this.selectKit.options.closeOnChange) {
+            this.selectKit.close();
+          }
+
+          this.selectKit.set("filter", null);
+
+          this._focusFilter();
+        }
+      });
+    },
+
+    _modifyContentWrapper(content) {
+      content = this.modifyContent(content);
+
+      return applyContentPluginApiCallbacks(
+        this.pluginApiIdentifiers,
+        content,
+        this.selectKit
       );
     },
 
-    @discourseComputed("selection.[]", "isExpanded", "headerIcon")
-    headerComputedContent() {
-      return applyHeaderContentPluginApiCallbacks(
+    modifyContent(content) {
+      return content;
+    },
+
+    _modifyNoSelectionWrapper() {
+      let none = this.modifyNoSelection();
+      return applyModifyNoSelectionPluginApiCallbacks(
         this.pluginApiIdentifiers,
-        this.computeHeaderContent(),
-        this
+        none,
+        this.selectKit
       );
+    },
+
+    modifyNoSelection() {
+      if (this.selectKit.options.translatedNone) {
+        return this.defaultItem(null, this.selectKit.options.translatedNone);
+      }
+
+      let none = this.selectKit.options.none;
+
+      if (isNone(none) && !this.selectKit.options.allowAny) return null;
+
+      if (
+        isNone(none) &&
+        this.selectKit.options.allowAny &&
+        !this.selectKit.isExpanded
+      ) {
+        return this.defaultItem(
+          null,
+          I18n.t("select_kit.filter_placeholder_with_any")
+        );
+      }
+
+      let item;
+      switch (typeof none) {
+        case "string":
+          item = this.defaultItem(null, I18n.t(none));
+          break;
+        default:
+          item = none;
+      }
+
+      return item;
+    },
+
+    _modifySelectionWrapper(item) {
+      applyHeaderContentPluginApiCallbacks(
+        this.pluginApiIdentifiers,
+        item,
+        this.selectKit
+      );
+
+      return this.modifySelection(item);
+    },
+
+    modifySelection(item) {
+      return item;
+    },
+
+    _onKeydownWrapper(event) {
+      return this._boundaryActionHandler("onKeydown", event);
+    },
+
+    _onHover(value, item) {
+      throttle(this, this._highlight, item, 25, true);
+    },
+
+    _highlight(item) {
+      this.selectKit.set("highlighted", item);
     },
 
     _boundaryActionHandler(actionName, ...params) {
-      if (get(this.actions, actionName)) {
-        run.next(() => this.send(actionName, ...params));
-      } else if (this.get(actionName)) {
-        run.next(() => this.get(actionName)(...params));
+      if (!this.element || this.isDestroying || this.isDestroyed) {
+        return;
       }
-    },
 
-    highlight(computedContent) {
-      this.set("highlighted", computedContent);
-      this._boundaryActionHandler("onHighlight", computedContent);
-    },
+      let boundaryAction = true;
 
-    clearSelection() {
-      this.deselect(this.selection);
-      this.focusFilterOrHeader();
-      this.didClearSelection();
-    },
+      const privateActionName = `_${actionName}`;
+      const privateAction = get(this, privateActionName);
+      if (privateAction) {
+        boundaryAction = privateAction.call(this, ...params);
+      }
 
-    actions: {
-      onToggle() {
-        this.clearHighlightSelection();
-
-        if (this.isExpanded) {
-          this.collapse();
-        } else {
-          this.expand();
+      if (this.actions) {
+        const componentAction = get(this.actions, actionName);
+        if (boundaryAction && componentAction) {
+          boundaryAction = componentAction.call(this, ...params);
         }
-      },
-
-      onClickRow(computedContentItem) {
-        this.didClickRow(computedContentItem);
-      },
-
-      onClickSelectionItem(computedContentItem) {
-        this.didClickSelectionItem(computedContentItem);
-      },
-
-      onClearSelection() {
-        this.clearSelection();
-      },
-
-      onMouseoverRow(computedContentItem) {
-        this.highlight(computedContentItem);
-      },
-
-      onFilterComputedContent(filter) {
-        if (filter === this.previousFilter) return;
-
-        this.clearHighlightSelection();
-
-        this.setProperties({
-          highlighted: null,
-          renderedFilterOnce: true,
-          previousFilter: filter,
-          filter
-        });
-        this.autoHighlight();
-        this._boundaryActionHandler("onFilter", filter);
       }
+
+      const action = get(this, actionName);
+      if (boundaryAction && action) {
+        boundaryAction = action.call(this, ...params);
+      }
+
+      return boundaryAction;
+    },
+
+    deselect() {
+      this.clearErrors();
+      this.selectKit.change(null, null);
+    },
+
+    search(filter) {
+      let content = this.content || [];
+      if (filter) {
+        filter = this._normalize(filter);
+        content = content.filter(c => {
+          const name = this._normalize(this.getName(c));
+          return name && name.indexOf(filter) > -1;
+        });
+      }
+      return content;
+    },
+
+    _searchWrapper(filter) {
+      this.clearErrors();
+      this.setProperties({ mainCollection: [], "selectKit.isLoading": true });
+      this._safeAfterRender(() => this.popper && this.popper.scheduleUpdate());
+
+      let content = [];
+
+      return Promise.resolve(this.search(filter)).then(result => {
+        content = content.concat(makeArray(result));
+        content = this.selectKit.modifyContent(content).filter(Boolean);
+
+        if (this.selectKit.valueProperty) {
+          content = content.uniqBy(this.selectKit.valueProperty);
+        } else {
+          content = content.uniq();
+        }
+
+        if (this.selectKit.options.limitMatches) {
+          content = content.slice(0, this.selectKit.options.limitMatches);
+        }
+
+        const noneItem = this.selectKit.noneItem;
+
+        if (
+          this.selectKit.options.allowAny &&
+          filter &&
+          this.getName(noneItem) !== filter
+        ) {
+          if (this.validateCreate(filter, content)) {
+            content.unshift(this.defaultItem(filter, filter));
+          }
+        }
+
+        const hasNoContent = Ember.isEmpty(content);
+
+        if (
+          this.selectKit.hasSelection &&
+          noneItem &&
+          this.selectKit.options.autoInsertNoneItem
+        ) {
+          content.unshift(noneItem);
+        }
+
+        this.set("mainCollection", content);
+
+        this.selectKit.setProperties({
+          highlighted: this.mainCollection.firstObject,
+          isLoading: false,
+          hasNoContent
+        });
+
+        this._safeAfterRender(() => {
+          this.popper && this.popper.scheduleUpdate();
+          this._focusFilter();
+        });
+      });
+    },
+
+    _safeAfterRender(fn) {
+      schedule("afterRender", () => {
+        if (!this.element || this.isDestroyed || this.isDestroying) {
+          return;
+        }
+
+        fn();
+      });
+    },
+
+    _scrollToRow(rowItem) {
+      const value = this.getValue(rowItem);
+      const rowContainer = this.element.querySelector(
+        `.select-kit-row[data-value="${value}"]`
+      );
+
+      if (rowContainer) {
+        const $collection = $(
+          this.element.querySelector(".select-kit-collection")
+        );
+
+        const collectionTop = $collection.position().top;
+
+        $collection.scrollTop(
+          $collection.scrollTop() +
+            $(rowContainer).position().top -
+            collectionTop
+        );
+      }
+    },
+
+    _highlightNext() {
+      const highlightedIndex = this.mainCollection.indexOf(
+        this.selectKit.highlighted
+      );
+      let newHighlightedIndex = highlightedIndex;
+      const count = this.mainCollection.length;
+
+      if (highlightedIndex < count - 1) {
+        newHighlightedIndex = highlightedIndex + 1;
+      } else {
+        newHighlightedIndex = 0;
+      }
+
+      const highlighted = this.mainCollection.objectAt(newHighlightedIndex);
+      if (highlighted) {
+        this._scrollToRow(highlighted);
+        this.set("selectKit.highlighted", highlighted);
+      }
+    },
+
+    _highlightPrevious() {
+      const highlightedIndex = this.mainCollection.indexOf(
+        this.selectKit.highlighted
+      );
+      let newHighlightedIndex = highlightedIndex;
+      const count = this.mainCollection.length;
+
+      if (highlightedIndex > 0) {
+        newHighlightedIndex = highlightedIndex - 1;
+      } else {
+        newHighlightedIndex = count - 1;
+      }
+
+      const highlighted = this.mainCollection.objectAt(newHighlightedIndex);
+      if (highlighted) {
+        this._scrollToRow(highlighted);
+        this.set("selectKit.highlighted", highlighted);
+      }
+    },
+
+    select(value, item) {
+      if (!value) {
+        if (!this.validateSelect(this.selectKit.highlighted)) {
+          return;
+        }
+
+        this.selectKit.change(
+          this.getValue(this.selectKit.highlighted),
+          this.selectKit.highlighted
+        );
+      } else {
+        const existingItem = this.findValue(this.mainCollection, item);
+        if (existingItem) {
+          if (!this.validateSelect(item)) {
+            return;
+          }
+        }
+
+        this.selectKit.change(value, item || this.defaultItem(value, value));
+      }
+    },
+
+    _onClearSelection() {
+      this.selectKit.change(null, null);
+    },
+
+    _onOpenWrapper(event) {
+      let boundaryAction = this._boundaryActionHandler("onOpen");
+
+      boundaryAction = applyOnOpenPluginApiCallbacks(
+        this.pluginApiIdentifiers,
+        this.selectKit,
+        event
+      );
+
+      return boundaryAction;
+    },
+
+    _onCloseWrapper(event) {
+      this.set("selectKit.highlighted", null);
+
+      let boundaryAction = this._boundaryActionHandler("onClose");
+
+      boundaryAction = applyOnClosePluginApiCallbacks(
+        this.pluginApiIdentifiers,
+        this.selectKit,
+        event
+      );
+
+      return boundaryAction;
+    },
+
+    _toggle(event) {
+      if (this.selectKit.isExpanded) {
+        this._close(event);
+      } else {
+        this._open(event);
+      }
+    },
+
+    _close(event) {
+      if (!this.selectKit.isExpanded) {
+        return;
+      }
+
+      this.clearErrors();
+
+      if (!this.selectKit.onClose(event)) {
+        return;
+      }
+
+      this.selectKit.setProperties({
+        isExpanded: false,
+        filter: null
+      });
+    },
+
+    _open(event) {
+      if (this.selectKit.isExpanded) {
+        return;
+      }
+
+      this.clearErrors();
+
+      if (!this.selectKit.onOpen(event)) {
+        return;
+      }
+
+      if (!this.popper) {
+        const anchor = document.querySelector(
+          `[data-select-kit-id=${this.selectKit.uniqueID}-header]`
+        );
+        const popper = document.querySelector(
+          `[data-select-kit-id=${this.selectKit.uniqueID}-body]`
+        );
+
+        /* global Popper:true */
+        this.popper = new Popper(anchor, popper, {
+          eventsEnabled: false,
+          placement: this.selectKit.options.placement,
+          modifiers: {
+            fullWidthMobile: {
+              order: 900 - 1,
+              enabled: this.site.mobileView,
+              fn: data => {
+                const mainOutlet = document.getElementById("main-outlet");
+                if (mainOutlet) {
+                  const clientWidth = mainOutlet.clientWidth;
+                  if (clientWidth < 500) {
+                    data.styles.width = clientWidth - 20;
+                  }
+                }
+                return data;
+              }
+            },
+            preventOverflow: {
+              boundariesElement: "viewport"
+            }
+          },
+          onUpdate: popperHelper => {
+            if (!this.element || this.isDestroyed || this.isDestroying) {
+              return;
+            }
+
+            const wrapper = this.element.querySelector(".select-kit-wrapper");
+            if (wrapper) {
+              let height = this.element.offsetHeight;
+
+              const body = this.element.querySelector(".select-kit-body");
+              if (body) {
+                height += body.offsetHeight;
+              }
+
+              if (popperHelper.flipped) {
+                this.element.classList.remove("is-under");
+                this.element.classList.add("is-above");
+              } else {
+                this.element.classList.remove("is-above");
+                this.element.classList.add("is-under");
+              }
+
+              wrapper.style.width = `${this.element.offsetWidth}px`;
+              wrapper.style.height = `${height}px`;
+            }
+          }
+        });
+      }
+
+      this.selectKit.setProperties({
+        isExpanded: true,
+        isFilterExpanded:
+          this.selectKit.options.filterable || this.selectKit.options.allowAny
+      });
+
+      if (this._searchPromise) {
+        cancel(this._searchPromise);
+      }
+      this._searchPromise = this._searchWrapper();
+
+      this._safeAfterRender(() => {
+        this._focusFilter();
+        this.popper && this.popper.scheduleUpdate();
+      });
+    },
+
+    _focusFilter() {
+      this._safeAfterRender(() => {
+        const input = this.getFilterInput();
+        if (input) {
+          input.focus();
+        } else {
+          const headerContainer = this.getHeader();
+          headerContainer && headerContainer.focus();
+        }
+      });
+    },
+
+    getFilterInput() {
+      return document.querySelector(
+        `[data-select-kit-id=${this.selectKit.uniqueID}-filter] input`
+      );
+    },
+
+    getHeader() {
+      return document.querySelector(
+        `[data-select-kit-id=${this.selectKit.uniqueID}-header]`
+      );
+    },
+
+    handleDeprecations() {
+      this._deprecateValueAttribute();
+      this._deprecateMutations();
+      this._deprecateOptions();
+    },
+
+    _deprecated(text) {
+      const discourseSetup = document.getElementById("data-discourse-setup");
+      if (
+        discourseSetup &&
+        discourseSetup.getAttribute("data-environment") === "development"
+      ) {
+        deprecated(text, { since: "v2.4.0" });
+      }
+    },
+
+    _deprecateValueAttribute() {
+      if (this.valueAttribute) {
+        this._deprecated(
+          "The `valueAttribute` is deprecated. Use `valueProperty` instead"
+        );
+
+        this.set("valueProperty", this.valueAttribute);
+      }
+    },
+
+    _deprecateMutations() {
+      this.actions = this.actions || {};
+      this.attrs = this.attrs || {};
+
+      if (!this.attrs.onChange && !this.actions.onChange) {
+        this._deprecated(
+          "Implicit mutation has been deprecated, please use `onChange` handler"
+        );
+
+        this.actions.onChange =
+          this.attrs.onSelect ||
+          this.actions.onSelect ||
+          (value => this.set("value", value));
+      }
+    },
+
+    _deprecateOptions() {
+      const migrations = {
+        headerIcon: "icon",
+        onExpand: "onOpen",
+        onCollapse: "onClose",
+        allowAny: "options.allowAny",
+        allowCreate: "options.allowAny",
+        filterable: "options.filterable",
+        excludeCategoryId: "options.excludeCategoryId",
+        scopedCategoryId: "options.scopedCategoryId",
+        allowUncategorized: "options.allowUncategorized",
+        none: "options.none",
+        rootNone: "options.none",
+        rootNoneLabel: "options.none",
+        showFullTitle: "options.showFullTitle",
+        title: "options.translatedNone"
+      };
+
+      Object.keys(migrations).forEach(from => {
+        const to = migrations[from];
+        if (this.get(from) && !this.get(to)) {
+          this._deprecated(
+            `The \`${from}\` attribute is deprecated. Use \`${to}\` instead`
+          );
+
+          this.set(to, this.get(from));
+        }
+      });
     }
   }
 );

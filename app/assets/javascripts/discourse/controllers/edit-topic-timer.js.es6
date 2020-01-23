@@ -107,6 +107,10 @@ export default Controller.extend(ModalFunctionality, {
   },
 
   actions: {
+    onChangeSelection(value) {
+      this.set("topicTimer.status_type", value);
+    },
+
     saveTimer() {
       if (!this.get("topicTimer.updateTime")) {
         this.flash(

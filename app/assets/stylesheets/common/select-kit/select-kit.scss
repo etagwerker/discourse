@@ -29,19 +29,23 @@
       left: 0;
       position: absolute;
       top: 0;
+      align-items: center;
+      justify-content: center;
     }
 
     .select-kit-collection {
       border-radius: inherit;
+      width: 100%;
+    }
+  }
+
+  &.is-loading {
+    .select-kit-collection {
+      overflow: hidden;
     }
   }
 
   &.is-above {
-    .select-kit-body {
-      bottom: 0;
-      top: auto;
-    }
-
     .select-kit-filter {
       border-top: 0;
     }
@@ -61,7 +65,6 @@
     overflow: hidden;
     transition: all 0.25s;
     cursor: pointer;
-    outline: none;
     display: flex;
     align-items: center;
     flex-direction: row;
@@ -70,18 +73,18 @@
     .selected-name {
       text-align: left;
       flex: 0 1 auto;
-      padding: 1px 0;
       @include ellipsis;
       color: inherit;
-      .body {
-        max-width: 100%;
-        box-sizing: border-box;
-        display: flex;
-        align-items: center;
-      }
+      display: flex;
+
       .name {
         display: inline-block;
         @include ellipsis;
+      }
+
+      &.select-kit-selected-color {
+        border-bottom-width: 5px;
+        border-bottom-style: solid;
       }
     }
 
@@ -158,6 +161,11 @@
     .discourse-tag-count {
       color: $primary;
     }
+
+    &.create-color-row {
+      border-left-style: solid;
+      border-left-width: 5px;
+    }
   }
 
   .select-kit-collection {
@@ -205,10 +213,15 @@
   }
 
   .select-kit-filter {
-    display: flex;
     box-sizing: border-box;
     align-items: center;
     justify-content: space-between;
+    width: 100%;
+    padding: 0.25em;
+
+    &.is-expanded {
+      display: flex;
+    }
 
     .filter-input,
     .filter-input:focus,
@@ -246,5 +259,31 @@
     display: none;
     box-sizing: border-box;
     pointer-events: none;
+  }
+
+  .select-kit-errors-collection {
+    background: $danger;
+    padding: 0.25em 1em;
+    margin: 0;
+
+    .select-kit-error {
+      list-style: none;
+      color: $secondary;
+    }
+  }
+
+  .no-content,
+  .is-loading {
+    display: flex;
+    flex: 1 0 auto;
+    padding: 0.5em;
+    width: 100%;
+    box-sizing: border-box;
+    background: $secondary;
+  }
+
+  .is-loading {
+    align-items: center;
+    justify-content: center;
   }
 }

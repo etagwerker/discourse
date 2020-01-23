@@ -1,31 +1,16 @@
 import SingleSelectComponent from "select-kit/components/single-select";
-import discourseComputed, { on } from "discourse-common/utils/decorators";
 
 export default SingleSelectComponent.extend({
   pluginApiIdentifiers: ["combo-box"],
-  classNames: "combobox combo-box",
-  autoFilterable: true,
-  headerComponent: "combo-box/combo-box-header",
+  classNames: ["combobox", "combo-box"],
 
-  caretUpIcon: "caret-up",
-  caretDownIcon: "caret-down",
-  clearable: false,
-
-  computeHeaderContent() {
-    let content = this._super(...arguments);
-    content.hasSelection = this.hasSelection;
-    return content;
+  selectKitOptions: {
+    caretUpIcon: "caret-up",
+    caretDownIcon: "caret-down",
+    autoFilterable: "autoFilterable",
+    clearable: false,
+    headerComponent: "combo-box/combo-box-header"
   },
 
-  @discourseComputed("isExpanded", "caretUpIcon", "caretDownIcon")
-  caretIcon(isExpanded, caretUpIcon, caretDownIcon) {
-    return isExpanded ? caretUpIcon : caretDownIcon;
-  },
-
-  @on("didUpdateAttrs", "init")
-  _setComboBoxOptions() {
-    this.headerComponentOptions.setProperties({
-      clearable: this.clearable
-    });
-  }
+  autoFilterable: Ember.computed.gte("content.length", 5)
 });

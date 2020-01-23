@@ -39,8 +39,11 @@ QUnit.test("Settings", async assert => {
 
   assert.ok(find(".reviewable-score-type").length, "has a list of bonuses");
 
-  await fillIn(".reviewable-score-type:eq(0) .field input ", "0.5");
+  const field = selectKit(".reviewable-score-type:eq(0) .field .combo-box");
+  await field.expand();
+  await field.selectRowByValue("5");
   await click(".save-settings");
+
   assert.ok(find(".reviewable-settings .saved").length, "it saved");
 });
 

@@ -25,7 +25,8 @@
               {{category-chooser
                 class="small"
                 value=(unbound buffered.category_id)
-                onSelectAny=(action "topicCategoryChanged")}}
+                onChange=(action "topicCategoryChanged")
+              }}
             {{/if}}
 
             {{#if canEditTags}}

@@ -2,6 +2,8 @@ import discourseComputed from "discourse-common/utils/decorators";
 import Component from "@ember/component";
 
 export default Component.extend({
+  tokenSeparator: "|",
+
   init() {
     this._super(...arguments);
 
@@ -30,5 +32,11 @@ export default Component.extend({
   disablePublicSetting(visibility_level, allowMembershipRequests) {
     visibility_level = parseInt(visibility_level, 10);
     return allowMembershipRequests || visibility_level > 1;
+  },
+
+  actions: {
+    onChangeEmailDomainsSetting(value) {
+      this.set("model.emailDomains", value.join(this.tokenSeparator));
+    }
   }
 });

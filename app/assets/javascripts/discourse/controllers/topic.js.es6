@@ -242,8 +242,8 @@ export default Controller.extend(bufferedProperty("model"), {
   },
 
   actions: {
-    topicCategoryChanged(selection) {
-      this.set("buffered.category_id", selection.value);
+    topicCategoryChanged(categoryId) {
+      this.set("buffered.category_id", categoryId);
     },
 
     topicTagsChanged({ target }) {

@@ -1,3 +1,10 @@
-{{list-setting settingValue=value choices=setting.choices settingName=setting.setting allowAny=allowAny}}
+{{list-setting
+  value=settingValue
+  choices=setting.choices
+  settingName=setting.setting
+  allowAny=allowAny
+  onChange=(action "onChangeListSetting")
+}}
+
 {{setting-validation-message message=validationMessage}}
 <div class='desc'>{{{unbound setting.description}}}</div>

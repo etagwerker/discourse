@@ -1,53 +1,55 @@
 import MultiSelectComponent from "select-kit/components/multi-select";
-const { isNone, makeArray } = Ember;
+import { MAIN_COLLECTION_IDENTIFIER } from "select-kit/components/select-kit";
+import { computed } from "@ember/object";
 
 export default MultiSelectComponent.extend({
   pluginApiIdentifiers: ["list-setting"],
-  classNames: "list-setting",
-  tokenSeparator: "|",
-  settingValue: "",
+  classNames: ["list-setting"],
   choices: null,
-  filterable: true,
+  nameProperty: null,
+  valueProperty: null,
 
-  init() {
+  selectKitOptions: {
+    filterable: true,
+    selectedNameComponent: "selectedNameComponent"
+  },
+
+  selectedNameComponent: computed("settingName", function() {
+    if (this.settingName && this.settingName.indexOf("color") > -1) {
+      return "selected-color";
+    } else {
+      return "selected-name";
+    }
+  }),
+
+  componentForRow(collection, value) {
+    if (
+      collection === MAIN_COLLECTION_IDENTIFIER &&
+      value === this.selectKit.filter &&
+      this.settingName &&
+      this.settingName.indexOf("color") > -1
+    ) {
+      return "create-color-row";
+    }
+
+    return this._super(...arguments);
+  },
+
+  didReceiveAttrs() {
     this._super(...arguments);
 
-    if (!isNone(this.settingName)) {
-      this.set("nameProperty", this.settingName);
-    }
+    const values = (this.value || []).map(v => {
+      if (this.selectKit.valueProperty) {
+        return this.choices.findBy(this.valueProperty, v);
+      } else {
+        return v;
+      }
+    });
 
-    if (this.nameProperty.indexOf("color") > -1) {
-      this.headerComponentOptions.setProperties({
-        selectedNameComponent: "multi-select/selected-color"
-      });
-    }
-  },
-
-  computeContent() {
-    let content;
-    if (isNone(this.choices)) {
-      content = this.settingValue.split(this.tokenSeparator);
-    } else {
-      content = this.choices;
-    }
-
-    return makeArray(content).filter(c => c);
-  },
-
-  mutateValues(values) {
-    this.set("settingValue", values.join(this.tokenSeparator));
-  },
-
-  computeValues() {
-    return this.settingValue.split(this.tokenSeparator).filter(c => c);
-  },
-
-  _handleTabOnKeyDown(event) {
-    if (this.$highlightedRow().length === 1) {
-      this._super(event);
-    } else {
-      this.close();
-      return false;
-    }
+    this.setProperties({
+      content: [...new Set([...values, ...(this.choices || [])])].filter(
+        Boolean
+      )
+    });
   }
 });

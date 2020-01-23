@@ -1,3 +1,4 @@
+import { computed } from "@ember/object";
 import { equal } from "@ember/object/computed";
 import { isEmpty } from "@ember/utils";
 import ComboBoxComponent from "select-kit/components/combo-box";
@@ -191,16 +192,21 @@ export default ComboBoxComponent.extend(DatetimeMixin, {
   classNames: ["future-date-input-selector"],
   isCustom: equal("value", "pick_date_and_time"),
   isBasedOnLastPost: equal("value", "set_based_on_last_post"),
-  rowComponent: "future-date-input-selector/future-date-input-selector-row",
-  headerComponent:
-    "future-date-input-selector/future-date-input-selector-header",
 
-  computeHeaderContent() {
-    let content = this._super(...arguments);
-    content.datetime = this._computeDatetimeForValue(this.computedValue);
+  selectKitOptions: {
+    headerComponent:
+      "future-date-input-selector/future-date-input-selector-header"
+  },
+
+  componentForRow() {
+    return "future-date-input-selector/future-date-input-selector-row";
+  },
+
+  modifySelection(content) {
+    content.datetime = this._computeDatetimeForValue(this.value);
     content.name = this.get("selection.name") || content.name;
-    content.hasSelection = this.hasSelection;
-    content.icons = this._computeIconsForValue(this.computedValue);
+    content.hasSelection = this.selectKit.hasSelection;
+    content.icons = this._computeIconsForValue(this.value);
     return content;
   },
 
@@ -213,9 +219,9 @@ export default ComboBoxComponent.extend(DatetimeMixin, {
     return computedContentItem;
   },
 
-  computeContent() {
-    let now = moment();
-    let opts = {
+  content: computed(function() {
+    const now = moment();
+    const opts = {
       now,
       day: now.day(),
       includeWeekend: this.includeWeekend,
@@ -232,20 +238,18 @@ export default ComboBoxComponent.extend(DatetimeMixin, {
         name: I18n.t(`topic.auto_update_input.${tf.id}`)
       };
     });
-  },
+  }),
 
-  mutateValue(value) {
-    if (value === "pick_date_and_time" || this.isBasedOnLastPost) {
-      this.set("value", value);
-    } else {
-      let input = null;
-      const { time } = this._updateAt(value);
-
-      if (time && !isEmpty(value)) {
-        input = time.locale("en").format(FORMAT);
+  actions: {
+    onChange(value) {
+      if (value !== "pick_date_and_time" || !this.isBasedOnLastPost) {
+        const { time } = this._updateAt(value);
+        if (time && !isEmpty(value)) {
+          this.onChangeInput(time.locale("en").format(FORMAT));
+        }
       }
 
-      this.setProperties({ input, value });
+      this.onChangeSelection(value);
     }
   }
 });

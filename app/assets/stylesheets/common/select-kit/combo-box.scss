@@ -18,9 +18,10 @@
     }
 
     .select-kit-filter {
-      padding: $input-padding;
-      border-top: 1px solid $primary-low;
-      border-bottom: 1px solid $primary-low;
+      &.is-expanded {
+        border-top: 1px solid $primary-low;
+        border-bottom: 1px solid $primary-low;
+      }
 
       .spinner {
         flex: 0 0 auto;
@@ -29,12 +30,11 @@
       .filter-input,
       .filter-input:focus,
       .filter-input:active {
-        flex: 0 0 auto;
-        width: 90%; // Firefox quirk
+        flex: 1;
       }
 
       .filter-icon {
-        padding-left: 5px;
+        margin-left: 5px;
       }
     }
 

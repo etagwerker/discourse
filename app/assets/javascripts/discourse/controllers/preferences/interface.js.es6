@@ -195,6 +195,8 @@ export default Controller.extend(PreferencesTabController, {
 
       // Force refresh when leaving this screen
       Discourse.set("assetVersion", "forceRefresh");
+
+      this.set("textSize", newSize);
     }
   }
 });

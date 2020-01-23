@@ -39,6 +39,15 @@ function modifyHeaderComputedContent(pluginApiIdentifiers, contentFunction) {
   );
 }
 
+let _modifyNoSelectionCallbacks = {};
+function modifyNoSelection(pluginApiIdentifiers, contentFunction) {
+  if (isNone(_modifyNoSelectionCallbacks[pluginApiIdentifiers])) {
+    _modifyNoSelectionCallbacks[pluginApiIdentifiers] = [];
+  }
+
+  _modifyNoSelectionCallbacks[pluginApiIdentifiers].push(contentFunction);
+}
+
 let _modifyCollectionHeaderCallbacks = {};
 function modifyCollectionHeader(pluginApiIdentifiers, contentFunction) {
   if (isNone(_modifyCollectionHeaderCallbacks[pluginApiIdentifiers])) {
@@ -46,15 +55,6 @@ function modifyCollectionHeader(pluginApiIdentifiers, contentFunction) {
   }
 
   _modifyCollectionHeaderCallbacks[pluginApiIdentifiers].push(contentFunction);
-}
-
-let _onSelectNoneCallbacks = {};
-function onSelectNone(pluginApiIdentifiers, mutationFunction) {
-  if (isNone(_onSelectNoneCallbacks[pluginApiIdentifiers])) {
-    _onSelectNoneCallbacks[pluginApiIdentifiers] = [];
-  }
-
-  _onSelectNoneCallbacks[pluginApiIdentifiers].push(mutationFunction);
 }
 
 let _onSelectCallbacks = {};
@@ -66,18 +66,47 @@ function onSelect(pluginApiIdentifiers, mutationFunction) {
   _onSelectCallbacks[pluginApiIdentifiers].push(mutationFunction);
 }
 
-export function applyContentPluginApiCallbacks(identifiers, content, context) {
+let _onOpenCallbacks = {};
+function onOpen(pluginApiIdentifiers, mutationFunction) {
+  if (isNone(_onOpenCallbacks[pluginApiIdentifiers])) {
+    _onOpenCallbacks[pluginApiIdentifiers] = [];
+  }
+
+  _onOpenCallbacks[pluginApiIdentifiers].push(mutationFunction);
+}
+
+let _onCloseCallbacks = {};
+function onClose(pluginApiIdentifiers, mutationFunction) {
+  if (isNone(_onCloseCallbacks[pluginApiIdentifiers])) {
+    _onCloseCallbacks[pluginApiIdentifiers] = [];
+  }
+
+  _onCloseCallbacks[pluginApiIdentifiers].push(mutationFunction);
+}
+
+let _onInputCallbacks = {};
+function onInput(pluginApiIdentifiers, mutationFunction) {
+  if (isNone(_onInputCallbacks[pluginApiIdentifiers])) {
+    _onInputCallbacks[pluginApiIdentifiers] = [];
+  }
+
+  _onInputCallbacks[pluginApiIdentifiers].push(mutationFunction);
+}
+
+export function applyContentPluginApiCallbacks(
+  identifiers,
+  content,
+  selectKit
+) {
   identifiers.forEach(key => {
     (_prependContentCallbacks[key] || []).forEach(c => {
-      content = c()
-        .concat(content)
-        .uniqBy("id");
+      content = Ember.makeArray(c(selectKit, content)).concat(content);
     });
     (_appendContentCallbacks[key] || []).forEach(c => {
-      content = content.concat(c()).uniqBy("id");
+      content = content.concat(Ember.makeArray(c(selectKit, content)));
     });
     (_modifyContentCallbacks[key] || []).forEach(c => {
-      content = c(context, content).uniqBy("id");
+      content = c(selectKit, content);
     });
   });
 
@@ -97,10 +126,13 @@ export function applyHeaderContentPluginApiCallbacks(
 
   return content;
 }
-
-export function applyCollectionHeaderCallbacks(identifiers, content, context) {
+export function applyModifyNoSelectionPluginApiCallbacks(
+  identifiers,
+  content,
+  context
+) {
   identifiers.forEach(key => {
-    (_modifyCollectionHeaderCallbacks[key] || []).forEach(c => {
+    (_modifyNoSelectionCallbacks[key] || []).forEach(c => {
       content = c(context, content);
     });
   });
@@ -108,16 +140,54 @@ export function applyCollectionHeaderCallbacks(identifiers, content, context) {
   return content;
 }
 
-export function applyOnSelectPluginApiCallbacks(identifiers, val, context) {
+export function applyCollectionHeaderCallbacks(
+  identifiers,
+  content,
+  selectKit
+) {
   identifiers.forEach(key => {
-    (_onSelectCallbacks[key] || []).forEach(c => c(context, val));
+    (_modifyCollectionHeaderCallbacks[key] || []).forEach(c => {
+      content = c(selectKit, content);
+    });
+  });
+
+  return content;
+}
+
+export function applyOnSelectPluginApiCallbacks(identifiers, val, selectKit) {
+  identifiers.forEach(key => {
+    (_onSelectCallbacks[key] || []).forEach(c => c(selectKit, val));
   });
 }
 
-export function applyOnSelectNonePluginApiCallbacks(identifiers, context) {
+export function applyOnOpenPluginApiCallbacks(identifiers, selectKit, event) {
+  let keepBubbling = true;
   identifiers.forEach(key => {
-    (_onSelectNoneCallbacks[key] || []).forEach(c => c(context));
+    (_onOpenCallbacks[key] || []).forEach(
+      c => (keepBubbling = c(selectKit, event))
+    );
   });
+  return keepBubbling;
+}
+
+export function applyOnClosePluginApiCallbacks(identifiers, selectKit, event) {
+  let keepBubbling = true;
+  identifiers.forEach(key => {
+    (_onCloseCallbacks[key] || []).forEach(
+      c => (keepBubbling = c(selectKit, event))
+    );
+  });
+  return keepBubbling;
+}
+
+export function applyOnInputPluginApiCallbacks(identifiers, event, selectKit) {
+  let keepBubbling = true;
+  identifiers.forEach(key => {
+    (_onInputCallbacks[key] || []).forEach(
+      c => (keepBubbling = c(selectKit, event))
+    );
+  });
+  return keepBubbling;
 }
 
 export function modifySelectKit(pluginApiIdentifiers) {
@@ -142,6 +212,14 @@ export function modifySelectKit(pluginApiIdentifiers) {
       modifyHeaderComputedContent(pluginApiIdentifiers, callback);
       return modifySelectKit(pluginApiIdentifiers);
     },
+    modifySelection: callback => {
+      modifyHeaderComputedContent(pluginApiIdentifiers, callback);
+      return modifySelectKit(pluginApiIdentifiers);
+    },
+    modifyNoSelection: callback => {
+      modifyNoSelection(pluginApiIdentifiers, callback);
+      return modifySelectKit(pluginApiIdentifiers);
+    },
     modifyCollectionHeader: callback => {
       modifyCollectionHeader(pluginApiIdentifiers, callback);
       return modifySelectKit(pluginApiIdentifiers);
@@ -150,8 +228,16 @@ export function modifySelectKit(pluginApiIdentifiers) {
       onSelect(pluginApiIdentifiers, callback);
       return modifySelectKit(pluginApiIdentifiers);
     },
-    onSelectNone: callback => {
-      onSelectNone(pluginApiIdentifiers, callback);
+    onClose: callback => {
+      onClose(pluginApiIdentifiers, callback);
+      return modifySelectKit(pluginApiIdentifiers);
+    },
+    onOpen: callback => {
+      onOpen(pluginApiIdentifiers, callback);
+      return modifySelectKit(pluginApiIdentifiers);
+    },
+    onInput: callback => {
+      onInput(pluginApiIdentifiers, callback);
       return modifySelectKit(pluginApiIdentifiers);
     }
   };
@@ -160,11 +246,14 @@ export function modifySelectKit(pluginApiIdentifiers) {
 export function clearCallbacks() {
   _appendContentCallbacks = {};
   _prependContentCallbacks = {};
+  _modifyNoSelectionCallbacks = {};
   _modifyContentCallbacks = {};
   _modifyHeaderComputedContentCallbacks = {};
   _modifyCollectionHeaderCallbacks = {};
   _onSelectCallbacks = {};
-  _onSelectNoneCallbacks = {};
+  _onCloseCallbacks = {};
+  _onOpenCallbacks = {};
+  _onInputCallbacks = {};
 }
 
 const EMPTY_ARRAY = Object.freeze([]);

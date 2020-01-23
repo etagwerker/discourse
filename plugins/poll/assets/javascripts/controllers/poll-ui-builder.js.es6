@@ -1,5 +1,5 @@
 import Controller from "@ember/controller";
-import computed, { observes } from "discourse-common/utils/decorators";
+import discourseComputed, { observes } from "discourse-common/utils/decorators";
 import EmberObject from "@ember/object";
 
 export const BAR_CHART_TYPE = "bar";
@@ -19,12 +19,15 @@ export default Controller.extend({
     { name: PIE_CHART_TYPE.capitalize(), value: PIE_CHART_TYPE }
   ],
 
+  pollType: null,
+  pollResult: null,
+
   init() {
     this._super(...arguments);
     this._setupPoll();
   },
 
-  @computed("regularPollType", "numberPollType", "multiplePollType")
+  @discourseComputed("regularPollType", "numberPollType", "multiplePollType")
   pollTypes(regularPollType, numberPollType, multiplePollType) {
     return [
       {
@@ -42,12 +45,12 @@ export default Controller.extend({
     ];
   },
 
-  @computed("chartType", "pollType", "numberPollType")
+  @discourseComputed("chartType", "pollType", "numberPollType")
   isPie(chartType, pollType, numberPollType) {
     return pollType !== numberPollType && chartType === PIE_CHART_TYPE;
   },
 
-  @computed(
+  @discourseComputed(
     "alwaysPollResult",
     "votePollResult",
     "closedPollResult",
@@ -73,7 +76,7 @@ export default Controller.extend({
         value: closedPollResult
       }
     ];
-    if (this.currentUser.staff) {
+    if (this.get("currentUser.staff")) {
       options.push({
         name: I18n.t("poll.ui_builder.poll_result.staff"),
         value: staffPollResult
@@ -82,27 +85,27 @@ export default Controller.extend({
     return options;
   },
 
-  @computed("pollType", "regularPollType")
+  @discourseComputed("pollType", "regularPollType")
   isRegular(pollType, regularPollType) {
     return pollType === regularPollType;
   },
 
-  @computed("pollType", "pollOptionsCount", "multiplePollType")
+  @discourseComputed("pollType", "pollOptionsCount", "multiplePollType")
   isMultiple(pollType, count, multiplePollType) {
     return pollType === multiplePollType && count > 0;
   },
 
-  @computed("pollType", "numberPollType")
+  @discourseComputed("pollType", "numberPollType")
   isNumber(pollType, numberPollType) {
     return pollType === numberPollType;
   },
 
-  @computed("isRegular")
+  @discourseComputed("isRegular")
   showMinMax(isRegular) {
     return !isRegular;
   },
 
-  @computed("pollOptions")
+  @discourseComputed("pollOptions")
   pollOptionsCount(pollOptions) {
     if (pollOptions.length === 0) return 0;
 
@@ -115,7 +118,7 @@ export default Controller.extend({
     return length;
   },
 
-  @observes("isMultiple", "isNumber", "pollOptionsCount")
+  @observes("pollType", "pollOptionsCount")
   _setPollMax() {
     const isMultiple = this.isMultiple;
     const isNumber = this.isNumber;
@@ -128,7 +131,7 @@ export default Controller.extend({
     }
   },
 
-  @computed("isRegular", "isMultiple", "isNumber", "pollOptionsCount")
+  @discourseComputed("isRegular", "isMultiple", "isNumber", "pollOptionsCount")
   pollMinOptions(isRegular, isMultiple, isNumber, count) {
     if (isRegular) return;
 
@@ -142,7 +145,7 @@ export default Controller.extend({
     }
   },
 
-  @computed(
+  @discourseComputed(
     "isRegular",
     "isMultiple",
     "isNumber",
@@ -168,13 +171,13 @@ export default Controller.extend({
     }
   },
 
-  @computed("isNumber", "pollMax")
+  @discourseComputed("isNumber", "pollMax")
   pollStepOptions(isNumber, pollMax) {
     if (!isNumber) return;
     return this._comboboxOptions(1, (parseInt(pollMax, 10) || 1) + 1);
   },
 
-  @computed(
+  @discourseComputed(
     "isNumber",
     "showMinMax",
     "pollType",
@@ -249,7 +252,7 @@ export default Controller.extend({
     return output;
   },
 
-  @computed(
+  @discourseComputed(
     "pollOptionsCount",
     "isRegular",
     "isMultiple",
@@ -265,7 +268,7 @@ export default Controller.extend({
     );
   },
 
-  @computed("pollMin", "pollMax")
+  @discourseComputed("pollMin", "pollMax")
   minMaxValueValidation(pollMin, pollMax) {
     let options = { ok: true };
 
@@ -279,7 +282,7 @@ export default Controller.extend({
     return EmberObject.create(options);
   },
 
-  @computed("pollStep")
+  @discourseComputed("pollStep")
   minStepValueValidation(pollStep) {
     let options = { ok: true };
 
@@ -293,7 +296,7 @@ export default Controller.extend({
     return EmberObject.create(options);
   },
 
-  @computed("disableInsert")
+  @discourseComputed("disableInsert")
   minNumOfOptionsValidation(disableInsert) {
     let options = { ok: true };
 
@@ -315,7 +318,7 @@ export default Controller.extend({
 
   _setupPoll() {
     this.setProperties({
-      pollType: null,
+      pollType: this.get("pollTypes.firstObject.value"),
       publicPoll: false,
       pollOptions: "",
       pollMin: 1,

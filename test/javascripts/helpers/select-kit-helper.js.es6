@@ -24,7 +24,10 @@ async function collapseSelectKit(selector) {
 
 async function selectKitFillInFilter(filter, selector) {
   checkSelectKitIsNotCollapsed(selector);
-  await fillIn(`${selector} .filter-input`, filter);
+  await fillIn(
+    `${selector} .filter-input`,
+    find(`${selector} .filter-input`).val() + filter
+  );
 }
 
 async function selectKitSelectRowByValue(value, selector) {
@@ -66,7 +69,11 @@ async function keyboardHelper(value, target, selector) {
       tab: { keyCode: 9 }
     };
 
-    await triggerEvent(target, "keydown", mapping[value]);
+    await triggerEvent(
+      target,
+      "keydown",
+      mapping[value] || { keyCode: value.charCodeAt(0) }
+    );
   }
 }
 
@@ -105,7 +112,7 @@ function headerHelper(header) {
       return header.text().trim();
     },
     icon() {
-      return header.find(".icon");
+      return header.find(".d-icon");
     },
     title() {
       return header.attr("title");
@@ -123,6 +130,9 @@ function filterHelper(filter) {
     },
     exists() {
       return exists(filter);
+    },
+    value() {
+      return filter.find("input").val();
     },
     el() {
       return filter;
@@ -192,6 +202,17 @@ export default function selectKit(selector) {
 
     rows() {
       return find(selector).find(".select-kit-row");
+    },
+
+    displayedContent() {
+      return this.rows()
+        .map((_, row) => {
+          return {
+            name: row.getAttribute("data-name"),
+            id: row.getAttribute("data-value")
+          };
+        })
+        .toArray();
     },
 
     rowByValue(value) {

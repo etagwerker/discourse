@@ -1,25 +1,34 @@
-import selectKit from "helpers/select-kit-helper";
 import componentTest from "helpers/component-test";
+import { testSelectKitModule } from "./select-kit-test-helper";
 
-moduleForComponent("category-chooser", {
-  integration: true,
-  beforeEach: function() {
-    this.set("subject", selectKit());
-  }
-});
+testSelectKitModule("category-chooser");
+
+function template(options = []) {
+  return `
+    {{category-chooser
+      value=value
+      options=(hash
+        ${options.join("\n")}
+      )
+    }}
+  `;
+}
 
 componentTest("with value", {
-  template: "{{category-chooser value=2}}",
+  template: template(),
 
-  test(assert) {
+  beforeEach() {
+    this.set("value", 2);
+  },
+
+  async test(assert) {
     assert.equal(this.subject.header().value(), 2);
     assert.equal(this.subject.header().title(), "feature");
   }
 });
 
 componentTest("with excludeCategoryId", {
-  template: "{{category-chooser excludeCategoryId=2}}",
-
+  template: template(["excludeCategoryId=2"]),
   async test(assert) {
     await this.subject.expand();
 
@@ -28,7 +37,7 @@ componentTest("with excludeCategoryId", {
 });
 
 componentTest("with scopedCategoryId", {
-  template: "{{category-chooser scopedCategoryId=2}}",
+  template: template(["scopedCategoryId=2"]),
 
   async test(assert) {
     await this.subject.expand();
@@ -52,7 +61,7 @@ componentTest("with scopedCategoryId", {
 });
 
 componentTest("with allowUncategorized=null", {
-  template: "{{category-chooser allowUncategorized=null}}",
+  template: template(["allowUncategorized=null"]),
 
   beforeEach() {
     this.siteSettings.allow_uncategorized_topics = false;
@@ -60,12 +69,12 @@ componentTest("with allowUncategorized=null", {
 
   test(assert) {
     assert.equal(this.subject.header().value(), null);
-    assert.equal(this.subject.header().title(), "category");
+    assert.equal(this.subject.header().title(), "category&hellip;");
   }
 });
 
 componentTest("with allowUncategorized=null rootNone=true", {
-  template: "{{category-chooser allowUncategorized=null rootNone=true}}",
+  template: template(["allowUncategorized=null", "none=true"]),
 
   beforeEach() {
     this.siteSettings.allow_uncategorized_topics = false;
@@ -77,9 +86,8 @@ componentTest("with allowUncategorized=null rootNone=true", {
   }
 });
 
-componentTest("with disallowed uncategorized, rootNone and rootNoneLabel", {
-  template:
-    '{{category-chooser allowUncategorized=null rootNone=true rootNoneLabel="test.root"}}',
+componentTest("with disallowed uncategorized, none", {
+  template: template(["allowUncategorized=null", "none='test.root'"]),
 
   beforeEach() {
     I18n.translations[I18n.locale].js.test = { root: "root none label" };
@@ -93,20 +101,20 @@ componentTest("with disallowed uncategorized, rootNone and rootNoneLabel", {
 });
 
 componentTest("with allowed uncategorized", {
-  template: "{{category-chooser allowUncategorized=true}}",
+  template: template(["allowUncategorized=true"]),
 
   beforeEach() {
     this.siteSettings.allow_uncategorized_topics = true;
   },
 
   test(assert) {
-    assert.equal(this.subject.header().value(), null);
+    assert.equal(this.subject.header().value(), 17);
     assert.equal(this.subject.header().title(), "uncategorized");
   }
 });
 
-componentTest("with allowed uncategorized and rootNone", {
-  template: "{{category-chooser allowUncategorized=true rootNone=true}}",
+componentTest("with allowed uncategorized and none", {
+  template: template(["allowUncategorized=true", "none=true"]),
 
   beforeEach() {
     this.siteSettings.allow_uncategorized_topics = true;
@@ -118,9 +126,8 @@ componentTest("with allowed uncategorized and rootNone", {
   }
 });
 
-componentTest("with allowed uncategorized rootNone and rootNoneLabel", {
-  template:
-    '{{category-chooser allowUncategorized=true rootNone=true rootNoneLabel="test.root"}}',
+componentTest("with allowed uncategorized and none", {
+  template: template(["allowUncategorized=true", "none='test.root'"]),
 
   beforeEach() {
     I18n.translations[I18n.locale].js.test = { root: "root none label" };

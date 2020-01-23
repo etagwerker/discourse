@@ -1,16 +1,22 @@
 import ComboBoxComponent from "select-kit/components/combo-box";
-import discourseComputed from "discourse-common/utils/decorators";
 
 export default ComboBoxComponent.extend({
   pluginApiIdentifiers: ["timezone-input"],
-  classNames: "timezone-input",
-  allowAutoSelectFirst: false,
-  fullWidthOnMobile: true,
-  filterable: true,
-  allowAny: false,
+  classNames: ["timezone-input"],
+  nameProperty: "value",
 
-  @discourseComputed
-  content() {
+  selectKitOptions: {
+    filterable: true,
+    allowAny: false
+  },
+
+  search(filter) {
+    if (!filter || filter.length < 3) {
+      return [];
+    }
+
+    filter = filter.toLowerCase();
+
     let timezones;
 
     if (
@@ -18,14 +24,10 @@ export default ComboBoxComponent.extend({
       typeof moment.tz.localizedNames === "function"
     ) {
       timezones = moment.tz.localizedNames();
+    } else {
+      timezones = moment.tz.names();
     }
-    timezones = moment.tz.names();
 
-    return timezones.map(t => {
-      return {
-        id: t,
-        name: t
-      };
-    });
+    return timezones.filter(n => n.value.toLowerCase().indexOf(filter) > -1);
   }
 });
