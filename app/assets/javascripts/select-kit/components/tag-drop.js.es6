@@ -37,7 +37,8 @@ export default ComboBoxComponent.extend(TagsMixin, {
     caretUpIcon: "caret-down",
     fullWidthOnMobile: true,
     filterable: true,
-    headerComponent: "tag-drop/tag-drop-header"
+    headerComponent: "tag-drop/tag-drop-header",
+    autoInsertNoneItem: false
   },
 
   noTagsSelected: equal("tagId", NONE_TAG_ID),
