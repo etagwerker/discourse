@@ -36,7 +36,7 @@ export function getNativeContact(properties, multiple) {
     }
 
     navigator.contacts
-      .select(properties, {multiple: multiple})
+      .select(properties, { multiple })
       .then(resolve)
       .catch(() => {
         reject();
