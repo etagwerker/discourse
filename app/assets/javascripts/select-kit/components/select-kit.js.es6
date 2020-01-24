@@ -372,12 +372,12 @@ export default Component.extend(
 
     _onChangeWrapper(value, items) {
       return new Promise(resolve => {
-        if (!this.selectKit.valueProperty) {
-          const noneItem = this.modifyNoSelection();
-          if (noneItem === value) {
-            value = null;
-            items = [];
-          }
+        if (
+          !this.selectKit.valueProperty &&
+          this.selectKit.noneItem === value
+        ) {
+          value = null;
+          items = [];
         }
 
         this._boundaryActionHandler("onChange", value, items);
@@ -549,6 +549,7 @@ export default Component.extend(
           filter &&
           this.getName(noneItem) !== filter
         ) {
+          filter = this.createContentFromInput(filter);
           if (this.validateCreate(filter, content)) {
             content.unshift(this.defaultItem(filter, filter));
           }
