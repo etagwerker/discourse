@@ -24,15 +24,18 @@ export default Component.extend(UtilsMixin, {
     "ariaIsExpanded:aria-expanded",
     "selectKitId:data-select-kit-id",
     "roleButton:role",
-    "serializedValues:data-value",
+    "selectedValue:data-value",
+    "selectedNames:data-name",
     "serializedNames:title"
   ],
 
-  serializedValues: computed("value", function() {
-    return makeArray(this.value).join(",");
+  selectedValue: computed("value", function() {
+    return this.value === this.getValue(this.selectKit.noneItem)
+      ? null
+      : makeArray(this.value).join(",");
   }),
 
-  serializedNames: computed("selectedContent.[]", function() {
+  selectedNames: computed("selectedContent.[]", function() {
     return makeArray(this.selectedContent)
       .map(s => this.getName(s))
       .join(",");

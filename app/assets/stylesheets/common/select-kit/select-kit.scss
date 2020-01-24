@@ -1,7 +1,3 @@
-.mobile-view .select-kit.is-expanded {
-  z-index: z("dropdown");
-}
-
 .select-kit {
   border: none;
   min-width: 220px;
@@ -122,6 +118,7 @@
     display: none;
     background: $secondary;
     box-sizing: border-box;
+    min-width: inherit;
   }
 
   .select-kit-row {
@@ -217,11 +214,6 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 0.25em;
-
-    &.is-expanded {
-      display: flex;
-    }
 
     .filter-input,
     .filter-input:focus,
@@ -234,7 +226,7 @@
       border: 0;
       border-radius: 0;
       box-shadow: none;
-      width: 100%;
+      width: auto;
     }
 
     &.is-hidden {
@@ -265,6 +257,8 @@
     background: $danger;
     padding: 0.25em 1em;
     margin: 0;
+    width: 100%;
+    box-sizing: border-box;
 
     .select-kit-error {
       list-style: none;

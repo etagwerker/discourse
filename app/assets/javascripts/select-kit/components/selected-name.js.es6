@@ -25,7 +25,8 @@ export default Component.extend(UtilsMixin, {
     // we can't listen on `item.nameProperty` given it's variable
     this.setProperties({
       name: this.getName(this.item),
-      value: this.getValue(this.item)
+      value:
+        this.item === this.selectKit.noneItem ? null : this.getValue(this.item)
     });
   },
 

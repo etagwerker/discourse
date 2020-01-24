@@ -3,12 +3,13 @@ import Component from "@ember/component";
 import discourseComputed from "discourse-common/utils/decorators";
 import { isEmpty } from "@ember/utils";
 import { computed } from "@ember/object";
+import { not } from "@ember/object/computed";
 import UtilsMixin from "select-kit/mixins/utils";
 
 export default Component.extend(UtilsMixin, {
   layoutName: "select-kit/templates/components/select-kit/select-kit-filter",
   classNames: ["select-kit-filter"],
-  classNameBindings: ["selectKit.isFilterExpanded:is-expanded"],
+  classNameBindings: ["isExpanded:is-expanded"],
   attributeBindings: ["selectKitId:data-select-kit-id"],
   selectKitId: fmt("selectKit.uniqueID", "%@-filter"),
 
@@ -23,6 +24,8 @@ export default Component.extend(UtilsMixin, {
       );
     }
   ),
+
+  isExpanded: not("isHidden"),
 
   @discourseComputed(
     "selectKit.options.filterPlaceholder",

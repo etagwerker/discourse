@@ -16,10 +16,6 @@
         }
       }
 
-      .select-kit-body {
-        max-width: 32em;
-      }
-
       .select-kit-header {
         height: 30px;
 
@@ -59,12 +55,13 @@
 
       .selected-tags {
         max-height: 125px;
-        overflow: hidden;
+        overflow-y: auto;
         display: flex;
         border-bottom: 1px solid $primary-low;
         padding: 0.25em 0 0 0.25em;
         box-sizing: border-box;
         flex-wrap: wrap;
+        width: 100%;
 
         .selected-tag {
           background: $primary-low;

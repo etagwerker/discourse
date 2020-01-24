@@ -13,7 +13,7 @@ export default SelectKitHeaderComponent.extend({
     return [];
   }),
 
-  selectedValues: computed("selectedContent", function() {
+  selectedValue: computed("selectedContent", function() {
     if (this.selectedContent) {
       return this.selectedContent.map(c => this.getValue(c));
     }

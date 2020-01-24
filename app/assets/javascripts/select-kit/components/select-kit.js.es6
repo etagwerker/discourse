@@ -289,7 +289,7 @@ export default Component.extend(
     addError(error) {
       this.errorsCollection.pushObject(error);
 
-      this._safeAfterRender(() => this.popper && this.popper.scheduleUpdate());
+      this._safeAfterRender(() => this.popper && this.popper.update());
     },
 
     clearErrors() {
@@ -347,7 +347,7 @@ export default Component.extend(
     },
 
     _onInput(event) {
-      this.popper && this.popper.scheduleUpdate();
+      this.popper && this.popper.update();
 
       if (this._searchPromise) {
         cancel(this._searchPromise);
@@ -411,6 +411,7 @@ export default Component.extend(
 
     _modifyNoSelectionWrapper() {
       let none = this.modifyNoSelection();
+
       return applyModifyNoSelectionPluginApiCallbacks(
         this.pluginApiIdentifiers,
         none,
@@ -424,7 +425,6 @@ export default Component.extend(
       }
 
       let none = this.selectKit.options.none;
-
       if (isNone(none) && !this.selectKit.options.allowAny) return null;
 
       if (
@@ -524,7 +524,7 @@ export default Component.extend(
     _searchWrapper(filter) {
       this.clearErrors();
       this.setProperties({ mainCollection: [], "selectKit.isLoading": true });
-      this._safeAfterRender(() => this.popper && this.popper.scheduleUpdate());
+      this._safeAfterRender(() => this.popper && this.popper.update());
 
       let content = [];
 
@@ -574,7 +574,7 @@ export default Component.extend(
         });
 
         this._safeAfterRender(() => {
-          this.popper && this.popper.scheduleUpdate();
+          this.popper && this.popper.update();
           this._focusFilter();
         });
       });
@@ -747,55 +747,45 @@ export default Component.extend(
           `[data-select-kit-id=${this.selectKit.uniqueID}-body]`
         );
 
+        if (!this.site.mobileView && popper.offsetWidth < anchor.offsetWidth) {
+          popper.style.minWidth = `${anchor.offsetWidth}px`;
+        }
+
         /* global Popper:true */
-        this.popper = new Popper(anchor, popper, {
+        this.popper = Popper.createPopper(anchor, popper, {
           eventsEnabled: false,
           placement: this.selectKit.options.placement,
-          modifiers: {
-            fullWidthMobile: {
-              order: 900 - 1,
-              enabled: this.site.mobileView,
+          modifiers: [
+            {
+              name: "positionWrapper",
+              phase: "afterWrite",
+              enabled: true,
               fn: data => {
-                const mainOutlet = document.getElementById("main-outlet");
-                if (mainOutlet) {
-                  const clientWidth = mainOutlet.clientWidth;
-                  if (clientWidth < 500) {
-                    data.styles.width = clientWidth - 20;
+                const wrapper = this.element.querySelector(
+                  ".select-kit-wrapper"
+                );
+                if (wrapper) {
+                  let height = this.element.offsetHeight;
+
+                  const body = this.element.querySelector(".select-kit-body");
+                  if (body) {
+                    height += body.offsetHeight;
                   }
+
+                  if (data.flipped) {
+                    this.element.classList.remove("is-under");
+                    this.element.classList.add("is-above");
+                  } else {
+                    this.element.classList.remove("is-above");
+                    this.element.classList.add("is-under");
+                  }
+
+                  wrapper.style.width = `${this.element.offsetWidth}px`;
+                  wrapper.style.height = `${height}px`;
                 }
-                return data;
               }
-            },
-            preventOverflow: {
-              boundariesElement: "viewport"
             }
-          },
-          onUpdate: popperHelper => {
-            if (!this.element || this.isDestroyed || this.isDestroying) {
-              return;
-            }
-
-            const wrapper = this.element.querySelector(".select-kit-wrapper");
-            if (wrapper) {
-              let height = this.element.offsetHeight;
-
-              const body = this.element.querySelector(".select-kit-body");
-              if (body) {
-                height += body.offsetHeight;
-              }
-
-              if (popperHelper.flipped) {
-                this.element.classList.remove("is-under");
-                this.element.classList.add("is-above");
-              } else {
-                this.element.classList.remove("is-above");
-                this.element.classList.add("is-under");
-              }
-
-              wrapper.style.width = `${this.element.offsetWidth}px`;
-              wrapper.style.height = `${height}px`;
-            }
-          }
+          ]
         });
       }
 
@@ -812,7 +802,7 @@ export default Component.extend(
 
       this._safeAfterRender(() => {
         this._focusFilter();
-        this.popper && this.popper.scheduleUpdate();
+        this.popper && this.popper.update();
       });
     },
 
