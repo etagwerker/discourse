@@ -25,7 +25,7 @@
       {{combo-box
         class="available-groups"
         content=category.availableGroups
-        onSelect=(action "onSelectGroup")
+        onChange=(action "onSelectGroup")
         value=selectedGroup
         valueProperty=null
         nameProperty=null
@@ -34,7 +34,7 @@
         class="permission-selector"
         nameProperty="description"
         content=category.availablePermissions
-        onSelect=(action "onSelectPermission")
+        onChange=(action "onSelectPermission")
         value=selectedPermission
       }}
       {{d-button

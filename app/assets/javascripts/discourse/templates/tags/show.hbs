@@ -28,7 +28,7 @@
     {{#if tagNotification}}
       {{#unless additionalTags}}
         {{tag-notifications-button
-          onSelect=(action "changeTagNotificationLevel")
+          onChange=(action "changeTagNotificationLevel")
           value=tagNotification.notification_level
         }}
       {{/unless}}

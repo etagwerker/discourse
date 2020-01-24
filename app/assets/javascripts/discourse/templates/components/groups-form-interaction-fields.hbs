@@ -10,7 +10,7 @@
       content=visibilityLevelOptions
       castInteger=true
       class="groups-form-visibility-level"
-      onSelect=(action (mut model.visibility_level))
+      onChange=(action (mut model.visibility_level))
     }}
 
     <div class="control-instructions">
@@ -44,7 +44,7 @@
     value=model.mentionable_level
     content=aliasLevelOptions
     class="groups-form-mentionable-level"
-    onSelect=(action (mut model.mentionable_level))
+    onChange=(action (mut model.mentionable_level))
   }}
 </div>
 
@@ -57,7 +57,7 @@
     value=model.messageable_level
     content=aliasLevelOptions
     class="groups-form-messageable-level"
-    onSelect=(action (mut model.messageable_level))
+    onChange=(action (mut model.messageable_level))
   }}
 </div>
 

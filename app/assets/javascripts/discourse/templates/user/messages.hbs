@@ -103,7 +103,7 @@
     {{#if isGroup}}
       {{group-notifications-button
         value=group.group_user.notification_level
-        onSelect=(action "changeGroupNotificationLevel")
+        onChange=(action "changeGroupNotificationLevel")
       }}
     {{/if}}
 </div>

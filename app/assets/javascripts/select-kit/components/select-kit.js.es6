@@ -774,7 +774,12 @@ export default Component.extend(
                     height += body.offsetHeight;
                   }
 
-                  if (data.flipped) {
+                  const popperElement = data.state.elements.popper;
+                  if (
+                    popperElement &&
+                    popperElement.getAttribute("data-popper-placement") ===
+                      "top-start"
+                  ) {
                     this.element.classList.remove("is-under");
                     this.element.classList.add("is-above");
                   } else {

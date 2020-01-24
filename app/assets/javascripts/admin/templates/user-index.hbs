@@ -352,7 +352,7 @@
         content=site.trustLevels
         nameProperty="detailedName"
         value=model.trustLevel.id
-        onSelect=(action (mut model.trust_level))
+        onChange=(action (mut model.trust_level))
       }}
 
       {{#if model.dirty}}
@@ -535,7 +535,7 @@
               content=model.customGroups
               value=model.primary_group_id
               none="admin.groups.no_primary"
-              onSelect=(action (mut model.primary_group_id))
+              onChange=(action (mut model.primary_group_id))
             }}
           </div>
           {{#if primaryGroupDirty}}

@@ -43,7 +43,7 @@
           {{timezone-input
             options=(hash icon="globe")
             value=timezone
-            onSelect=(action (mut timezone))
+            onChange=(action (mut timezone))
           }}
         {{/unless}}
       </div>
@@ -73,7 +73,7 @@
         {{timezone-input
           value=timezone
           options=(hash icon="globe")
-          onSelect=(action (mut timezone))
+          onChange=(action (mut timezone))
         }}
       {{/if}}
     </div>
@@ -91,7 +91,7 @@
                 content=recurringOptions
                 class="recurrence-input"
                 value=recurring
-                onSelect=(action (mut recurring))
+                onChange=(action (mut recurring))
                 none="discourse_local_dates.create.form.recurring_none"}}
             </div>
           </div>
