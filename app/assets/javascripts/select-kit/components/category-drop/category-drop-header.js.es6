@@ -1,4 +1,5 @@
-import { reads } from "@ember/object/computed";
+import { readOnly } from "@ember/object/computed";
+import { schedule } from "@ember/runloop";
 import ComboBoxSelectBoxHeaderComponent from "select-kit/components/combo-box/combo-box-header";
 import discourseComputed from "discourse-common/utils/decorators";
 
@@ -7,7 +8,7 @@ export default ComboBoxSelectBoxHeaderComponent.extend({
     "select-kit/templates/components/category-drop/category-drop-header",
   classNames: ["category-drop-header"],
   classNameBindings: ["categoryStyleClass"],
-  categoryStyleClass: reads("site.category_style"),
+  categoryStyleClass: readOnly("site.category_style"),
 
   @discourseComputed("selectedContent.color")
   categoryBackgroundColor(categoryColor) {
@@ -48,7 +49,7 @@ export default ComboBoxSelectBoxHeaderComponent.extend({
   didInsertElement() {
     this._super(...arguments);
 
-    Ember.run.schedule("afterRender", () => {
+    schedule("afterRender", () => {
       this.element.setAttribute("style", this.categoryStyle);
       this.element
         .querySelector(".caret-icon")

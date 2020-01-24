@@ -1,5 +1,6 @@
 import DropdownSelectBoxComponent from "select-kit/components/dropdown-select-box";
 import { iconHTML } from "discourse-common/lib/icon-library";
+import { computed } from "@ember/object";
 
 export default DropdownSelectBoxComponent.extend({
   pluginApiIdentifiers: ["pinned-options"],
@@ -19,7 +20,7 @@ export default DropdownSelectBoxComponent.extend({
     return content;
   },
 
-  content: Ember.computed(function() {
+  content: computed(function() {
     const globally = this.topic.pinned_globally ? "_globally" : "";
 
     return [

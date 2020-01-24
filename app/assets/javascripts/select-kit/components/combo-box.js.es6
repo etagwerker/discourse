@@ -1,4 +1,5 @@
 import SingleSelectComponent from "select-kit/components/single-select";
+import { computed } from "@ember/object";
 
 export default SingleSelectComponent.extend({
   pluginApiIdentifiers: ["combo-box"],
@@ -12,5 +13,5 @@ export default SingleSelectComponent.extend({
     headerComponent: "combo-box/combo-box-header"
   },
 
-  autoFilterable: Ember.computed.gte("content.length", 5)
+  autoFilterable: computed.gte("content.length", 5)
 });
