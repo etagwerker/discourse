@@ -24,7 +24,7 @@
             {{#if showCategoryChooser}}
               {{category-chooser
                 class="small"
-                value=(unbound buffered.category_id)
+                value=buffered.category_id
                 onChange=(action "topicCategoryChanged")
               }}
             {{/if}}
