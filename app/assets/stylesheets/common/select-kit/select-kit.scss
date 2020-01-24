@@ -85,9 +85,10 @@
     }
 
     .btn-clear {
-      padding: 0 10px;
+      padding: 0.25em;
       border: 0;
       background: none;
+      min-height: auto;
     }
 
     .icon {
