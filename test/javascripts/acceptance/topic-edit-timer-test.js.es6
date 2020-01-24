@@ -194,7 +194,7 @@ QUnit.test("schedule", async assert => {
   await timerType.selectRowByValue("publish_to_category");
 
   assert.equal(categoryChooser.header().label(), "uncategorized");
-  assert.equal(categoryChooser.header().value(), 17);
+  assert.equal(categoryChooser.header().value(), null);
 
   assert.equal(futureDateInputSelector.header().label(), "Select a timeframe");
   assert.equal(futureDateInputSelector.header().value(), null);

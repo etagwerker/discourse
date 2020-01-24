@@ -56,7 +56,7 @@ componentTest("content", {
     );
     assert.equal(
       this.subject.header().value(),
-      "",
+      null,
       "it doesn't set a value from the content"
     );
   }
