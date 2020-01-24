@@ -124,7 +124,8 @@ export default Component.extend(UtilsMixin, {
       this.selectKit.close(event);
     } else if (
       this.selectKit.options.filterable ||
-      this.selectKit.options.autoFilterable
+      this.selectKit.options.autoFilterable ||
+      this.selectKit.options.allowAny
     ) {
       if (this.selectKit.isExpanded) {
         this._focusFilterInput();

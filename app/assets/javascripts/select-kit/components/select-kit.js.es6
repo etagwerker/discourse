@@ -690,6 +690,8 @@ export default Component.extend(
     },
 
     _onCloseWrapper(event) {
+      this._focusFilter();
+
       this.set("selectKit.highlighted", null);
 
       let boundaryAction = this._boundaryActionHandler("onClose");

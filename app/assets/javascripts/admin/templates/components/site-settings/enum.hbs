@@ -1,10 +1,9 @@
 {{combo-box
-  castInteger=true
   valueProperty="value"
   content=setting.validValues
   value=value
-  none=setting.allowsNone
   onSelect=(action (mut value))
+  allowAny=setting.allowsNone
 }}
 
 {{preview}}
