@@ -1,9 +1,10 @@
 .select-kit {
   &.combo-box {
+    min-width: auto;
+
     .select-kit-body {
       border-radius: 0;
       box-shadow: shadow("dropdown");
-      min-width: 150px;
     }
 
     .select-kit-row {
