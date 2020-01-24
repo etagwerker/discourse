@@ -444,7 +444,7 @@ export default Component.extend({
     searchContact() {
       getNativeContact(['email'], false)
         .then(result => {
-          this.setProperties({emailOrUsername: result[0].email[0]});
+          this.set("emailOrUsername", result[0].email[0]);
         });
     }
   }
