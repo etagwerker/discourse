@@ -73,6 +73,10 @@
           margin-right: 0.25em;
           margin-bottom: 0.25em;
 
+          .tag-icon {
+            margin-right: 0.25em;
+          }
+
           &.is-highlighted {
             box-shadow: 0 0 2px $danger, 0 1px 0 rgba(0, 0, 0, 0.05);
           }
@@ -82,7 +86,7 @@
             vertical-align: middle;
           }
 
-          &:hover .d-icon {
+          &:hover .d-icon.d-icon-times {
             color: $danger;
           }
         }

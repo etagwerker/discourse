@@ -31,10 +31,14 @@
 
             {{#if canEditTags}}
               {{mini-tag-chooser
-                filterable=true
-                tags=(unbound buffered.tags)
-                categoryId=(unbound buffered.category_id)
-                onChangeTags=(action "topicTagsChanged")}}
+                value=buffered.tags
+                onChange=(action "topicTagsChanged")
+                options=(hash
+                  filterable=true
+                  categoryId=buffered.category_id
+                  filterable=true
+                )
+              }}
             {{/if}}
 
             {{plugin-outlet name="edit-topic" args=(hash model=model buffered=buffered)}}
