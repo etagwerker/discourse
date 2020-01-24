@@ -1,9 +1,9 @@
 .select-kit.single-select {
   .select-kit-filter {
     display: flex;
-    padding: 0.25em;
 
     &.is-expanded {
+      padding: 0.25em;
       border-top: 1px solid $primary-low;
       border-bottom: 1px solid $primary-low;
     }
