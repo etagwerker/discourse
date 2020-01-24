@@ -24,7 +24,7 @@ componentTest("default", {
   },
 
   async test(assert) {
-    assert.equal(this.subject.header().title(), "bold,italic");
+    assert.equal(this.subject.header().name(), "bold,italic");
     assert.equal(this.subject.header().value(), "bold,italic");
 
     await this.subject.expand();

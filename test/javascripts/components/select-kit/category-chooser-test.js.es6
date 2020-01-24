@@ -23,7 +23,7 @@ componentTest("with value", {
 
   async test(assert) {
     assert.equal(this.subject.header().value(), 2);
-    assert.equal(this.subject.header().title(), "feature");
+    assert.equal(this.subject.header().label(), "feature");
   }
 });
 
@@ -69,7 +69,7 @@ componentTest("with allowUncategorized=null", {
 
   test(assert) {
     assert.equal(this.subject.header().value(), null);
-    assert.equal(this.subject.header().title(), "category&hellip;");
+    assert.equal(this.subject.header().label(), "category…");
   }
 });
 
@@ -82,7 +82,7 @@ componentTest("with allowUncategorized=null rootNone=true", {
 
   test(assert) {
     assert.equal(this.subject.header().value(), null);
-    assert.equal(this.subject.header().title(), "(no category)");
+    assert.equal(this.subject.header().label(), "(no category)");
   }
 });
 
@@ -96,7 +96,7 @@ componentTest("with disallowed uncategorized, none", {
 
   test(assert) {
     assert.equal(this.subject.header().value(), null);
-    assert.equal(this.subject.header().title(), "root none label");
+    assert.equal(this.subject.header().label(), "root none label");
   }
 });
 
@@ -108,12 +108,12 @@ componentTest("with allowed uncategorized", {
   },
 
   test(assert) {
-    assert.equal(this.subject.header().value(), 17);
-    assert.equal(this.subject.header().title(), "uncategorized");
+    assert.equal(this.subject.header().value(), null);
+    assert.equal(this.subject.header().label(), "uncategorized");
   }
 });
 
-componentTest("with allowed uncategorized and none", {
+componentTest("with allowed uncategorized and none=true", {
   template: template(["allowUncategorized=true", "none=true"]),
 
   beforeEach() {
@@ -122,7 +122,7 @@ componentTest("with allowed uncategorized and none", {
 
   test(assert) {
     assert.equal(this.subject.header().value(), null);
-    assert.equal(this.subject.header().title(), "(no category)");
+    assert.equal(this.subject.header().label(), "(no category)");
   }
 });
 
@@ -136,6 +136,6 @@ componentTest("with allowed uncategorized and none", {
 
   test(assert) {
     assert.equal(this.subject.header().value(), null);
-    assert.equal(this.subject.header().title(), "root none label");
+    assert.equal(this.subject.header().label(), "root none label");
   }
 });

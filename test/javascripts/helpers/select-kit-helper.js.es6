@@ -89,7 +89,8 @@ function rowHelper(row) {
       return row.attr("title");
     },
     value() {
-      return row.attr("data-value");
+      const value = row.attr("data-value");
+      return Ember.isEmpty(value) ? null : value;
     },
     exists() {
       return exists(row);
@@ -103,7 +104,8 @@ function rowHelper(row) {
 function headerHelper(header) {
   return {
     value() {
-      return header.attr("data-value");
+      const value = header.attr("data-value");
+      return Ember.isEmpty(value) ? null : value;
     },
     name() {
       return header.attr("data-name");
