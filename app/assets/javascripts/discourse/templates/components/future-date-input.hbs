@@ -19,7 +19,12 @@
 
   {{#if displayDateAndTimePicker}}
     <div class="control-group">
-      {{d-icon "calendar-alt"}} {{date-picker-future value=date defaultDate=date}}
+      {{d-icon "calendar-alt"}}
+      {{date-picker-future
+        value=date
+        defaultDate=date
+        onSelect=(action (mut date))
+      }}
     </div>
 
     <div class="control-group">
