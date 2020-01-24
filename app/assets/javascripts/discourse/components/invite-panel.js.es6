@@ -7,6 +7,8 @@ import { emailValid } from "discourse/lib/utilities";
 import Group from "discourse/models/group";
 import Invite from "discourse/models/invite";
 import { i18n } from "discourse/lib/computed";
+import { getNativeContact } from "discourse/lib/pwa-utils";
+
 
 export default Component.extend({
   tagName: null,
@@ -179,6 +181,10 @@ export default Component.extend({
       (emailValid(emailOrUsername) || isPrivateTopic || !invitingToTopic)
     );
   },
+
+  showContactPicker: Ember.computed(function() {
+    return this.capabilities.hasContactPicker;
+  }),
 
   @discourseComputed("emailOrUsername")
   showCustomMessage(emailOrUsername) {
@@ -433,6 +439,13 @@ export default Component.extend({
       } else {
         this.set("customMessage", null);
       }
+    },
+
+    searchContact() {
+      getNativeContact(['email'], false)
+        .then(result => {
+          this.setProperties({emailOrUsername: result[0].email[0]});
+        });
     }
   }
 });
