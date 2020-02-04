@@ -1,3 +1,6 @@
+addons:
+  artifacts: true
+
 language: ruby
 
 git:
