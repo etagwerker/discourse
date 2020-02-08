@@ -88,5 +88,8 @@ script:
         else
           bundle exec rspec && bundle exec rake plugin:spec
         fi
+        gem install skunk
+        cat coverage/.resultset.json
+        skunk app
       fi
     "
